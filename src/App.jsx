@@ -195,6 +195,14 @@ export default function App() {
     return localStorage.getItem('theme') === 'dark'
   })
 
+  // ✅ Centralized WhatsApp connection state — shared by Sidebar and Navbar
+  // (and anything else that needs it) so we don't duplicate socket
+  // listeners or end up with components showing different/stale data.
+  const [waStatus, setWaStatus] = useState('disconnected')
+  const [waPic, setWaPic]       = useState(null)
+  const [waNumber, setWaNumber] = useState(null)
+  const [waName, setWaName]     = useState(null)
+
   // ✅ Logout
   const handleLogout = () => {
     localStorage.removeItem('cf_token')
@@ -202,11 +210,61 @@ export default function App() {
     setActivePage('dashboard')
   }
 
-  // ✅ Login hone ke baad socket room join karo
+  // ✅ Login hone ke baad socket room join karo — aur agar socket
+  // kabhi disconnect/reconnect ho (network blip, server restart, etc.),
+  // room dobara join karo. Sirf [user?.id] pe depend karne se yeh
+  // sirf ek baar (login ke waqt) chalta tha — reconnect ke baad room
+  // membership khud-ba-khud khatam ho jaati hai server-side, aur
+  // dobara join na hone se whatsapp:connected jaise events kabhi
+  // is socket tak nahi pohanchte jab tak page refresh na ho.
   useEffect(() => {
-    if (user?.id) {
+    if (!user?.id) return
+
+    const joinRoom = () => {
       socket.emit('join', user.id)
       console.log('✅ Socket joined room for user:', user.id)
+    }
+
+    joinRoom() // initial join
+    socket.on('connect', joinRoom) // re-join on every reconnect
+
+    return () => {
+      socket.off('connect', joinRoom)
+    }
+  }, [user?.id])
+
+  // ✅ WhatsApp status — fetch once on login, then keep in sync via socket
+  useEffect(() => {
+    if (!user?.id) return
+
+    API.get('/whatsapp/status').then(({ data }) => {
+      if (data.isConnected) {
+        setWaStatus('connected')
+        setWaNumber(data.number || null)
+        setWaPic(data.profilePic || null)
+        setWaName(data.name || null)
+      }
+    }).catch(() => {})
+
+    const handleConnected = ({ number, name, profilePic } = {}) => {
+      setWaStatus('connected')
+      setWaNumber(number || null)
+      setWaName(name || null)
+      setWaPic(profilePic || null)
+    }
+    const handleDisconnected = () => {
+      setWaStatus('disconnected')
+      setWaPic(null)
+      setWaNumber(null)
+      setWaName(null)
+    }
+
+    socket.on('whatsapp:connected', handleConnected)
+    socket.on('whatsapp:disconnected', handleDisconnected)
+
+    return () => {
+      socket.off('whatsapp:connected', handleConnected)
+      socket.off('whatsapp:disconnected', handleDisconnected)
     }
   }, [user?.id])
 
@@ -273,6 +331,8 @@ export default function App() {
             setDarkMode={setDarkMode}
             onLogout={handleLogout}
             user={user}
+            waPic={waPic}
+            waName={waName}
           />
         )}
         <main className={`flex-1 ${isChats ? 'overflow-hidden' : 'overflow-y-auto'}`}>

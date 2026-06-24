@@ -4,10 +4,10 @@ import {
   Megaphone, Zap, BarChart2, Settings, MessageSquare, Sun, Moon,
   MoreHorizontal, LogOut,
 } from 'lucide-react'
-import { io } from 'socket.io-client'
+import { socket } from '../../App' // ✅ Reuse the single shared socket (joins user_${userId} room on login).
+                                    // A second independent connection here would never join that room,
+                                    // so whatsapp:connected/disconnected events would never arrive on it.
 import API from '../../services/api'
-
-const socket = io('http://localhost:5000', { autoConnect: true })
 
 const navLinks = [
   { label: 'Dashboard',    icon: LayoutDashboard, path: 'dashboard' },

@@ -48,8 +48,10 @@ export default function ActiveChats() {
     }
   }
 
-  // ✅ Cache bust fix
-  const fetchQR = async () => {
+  // ✅ Cache bust fix + bounded retries with backoff (prevents runaway
+  // polling that overlaps Puppeteer init calls and crashes the backend)
+  const fetchQR = async (attempt = 0) => {
+    const MAX_ATTEMPTS = 10
     try {
       setQrLoading(true)
       setShowQR(true)
@@ -60,10 +62,26 @@ export default function ActiveChats() {
       if (data.qr) {
         setQrCode(data.qr)
         setWaStatus('qr')
-      } else {
-        setTimeout(fetchQR, 2000)
+        return
       }
+      if (attempt >= MAX_ATTEMPTS) {
+        console.error('QR not available after several attempts. Please try again.')
+        setShowQR(false)
+        return
+      }
+      // Backoff: 3s, then 5s for subsequent attempts (slower than the
+      // server's own WhatsApp-init retry cycle, so we don't pile up
+      // requests faster than the backend can actually process them)
+      const delay = attempt === 0 ? 3000 : 5000
+      setTimeout(() => fetchQR(attempt + 1), delay)
     } catch (err) {
+      // 429 = rate limited by backend; back off longer instead of hammering
+      if (err.response?.status === 429) {
+        if (attempt < MAX_ATTEMPTS) {
+          setTimeout(() => fetchQR(attempt + 1), 8000)
+          return
+        }
+      }
       console.error('QR fetch failed:', err.message)
       setShowQR(false)
     } finally {

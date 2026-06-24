@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Search, Bell, Sun, Moon, ChevronDown, Settings } from 'lucide-react'
 
-export default function Navbar({ title, darkMode, setDarkMode, onLogout, user }) {
+export default function Navbar({ title, darkMode, setDarkMode, onLogout, user, waPic, waName }) {
   const [searchFocused, setSearchFocused] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
 
@@ -168,16 +168,29 @@ export default function Navbar({ title, darkMode, setDarkMode, onLogout, user })
         >
           {/* Avatar */}
           <div style={{ position: 'relative' }}>
-            <div style={{
-              width: '28px', height: '28px',
-              background: 'linear-gradient(135deg, #22C55E, #16A34A)',
-              borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontSize: '10px', fontWeight: 700,
-              flexShrink: 0,
-            }}>
-              AA
-            </div>
+            {waPic ? (
+              <img
+                src={waPic}
+                alt={waName || 'WhatsApp'}
+                style={{
+                  width: '28px', height: '28px',
+                  borderRadius: '50%', objectFit: 'cover',
+                  flexShrink: 0,
+                }}
+                onError={(e) => { e.target.style.display = 'none' }}
+              />
+            ) : (
+              <div style={{
+                width: '28px', height: '28px',
+                background: 'linear-gradient(135deg, #22C55E, #16A34A)',
+                borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: '10px', fontWeight: 700,
+                flexShrink: 0,
+              }}>
+                {(user?.name || 'User').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+              </div>
+            )}
             {/* Online dot */}
             <span style={{
               position: 'absolute', bottom: 0, right: 0,

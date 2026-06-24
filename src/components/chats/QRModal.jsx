@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { QrCode, CheckCircle, Loader } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 
 export default function QRModal({ qrCode, onClose, waStatus }) {
   const [phase, setPhase] = useState('qr') // qr → scanned → loading → done
@@ -82,11 +83,18 @@ export default function QRModal({ qrCode, onClose, waStatus }) {
               Open WhatsApp → Linked Devices → Link a Device
             </p>
             <div className="relative">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrCode)}`}
-                alt="WhatsApp QR"
-                className="w-56 h-56 mx-auto rounded-xl border border-gray-200"
-              />
+              <div className="w-56 h-56 mx-auto rounded-xl border border-gray-200 flex items-center justify-center bg-white">
+                {qrCode ? (
+                  <QRCodeSVG
+                    value={qrCode}
+                    size={232}
+                    level="H"
+                    includeMargin={false}
+                  />
+                ) : (
+                  <Loader size={24} className="text-green-600 animate-spin" />
+                )}
+              </div>
               {/* Scan animation overlay */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-56 h-0.5 bg-green-400/60 animate-scan-line" />
